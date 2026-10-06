@@ -63,6 +63,68 @@ CREATE TABLE IF NOT EXISTS audit_events (
     event_hash TEXT NOT NULL UNIQUE,
     occurred_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS approver_scopes (
+    approver_id TEXT PRIMARY KEY REFERENCES actors(actor_id),
+    level INTEGER NOT NULL CHECK(level BETWEEN 1 AND 3),
+    rule_ids_json TEXT NOT NULL,
+    resource_ids_json TEXT NOT NULL,
+    subject_ids_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS exception_requests (
+    exception_id TEXT PRIMARY KEY,
+    rule_id TEXT NOT NULL,
+    subject_ids_json TEXT NOT NULL,
+    resource_ids_json TEXT NOT NULL,
+    risk_level TEXT NOT NULL,
+    risk_factors_json TEXT NOT NULL,
+    mitigations_json TEXT NOT NULL,
+    risk_score INTEGER NOT NULL CHECK(risk_score BETWEEN 0 AND 100),
+    reason TEXT NOT NULL,
+    requested_by TEXT NOT NULL REFERENCES actors(actor_id),
+    status TEXT NOT NULL CHECK(status IN ('pending','approved','rejected','revoked','expired')),
+    effective_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    approved_at TEXT,
+    revoked_by TEXT,
+    revoked_at TEXT,
+    revoke_reason TEXT,
+    expired_at TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_exceptions_status_rule ON exception_requests(status, rule_id);
+CREATE TABLE IF NOT EXISTS exception_decisions (
+    exception_id TEXT NOT NULL REFERENCES exception_requests(exception_id),
+    level INTEGER NOT NULL,
+    approver_id TEXT NOT NULL,
+    decision TEXT NOT NULL CHECK(decision IN ('approved','rejected')),
+    comment TEXT NOT NULL,
+    audit_event_hash TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    PRIMARY KEY(exception_id, level)
+);
+CREATE TABLE IF NOT EXISTS exception_uses (
+    use_id TEXT PRIMARY KEY,
+    exception_id TEXT NOT NULL REFERENCES exception_requests(exception_id),
+    subject_id TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    reference TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    basis_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_exception_uses_exception ON exception_uses(exception_id);
+CREATE TABLE IF NOT EXISTS exception_reviews (
+    review_id TEXT PRIMARY KEY,
+    exception_id TEXT NOT NULL REFERENCES exception_requests(exception_id),
+    reviewer_id TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    findings_json TEXT NOT NULL,
+    residual_risk_level TEXT NOT NULL,
+    residual_risk_score INTEGER NOT NULL CHECK(residual_risk_score BETWEEN 0 AND 100),
+    created_at TEXT NOT NULL
+);
 """
 
 

@@ -11,6 +11,7 @@ from .audit import append_event, canonical_json, digest, verify_chain
 from .clock import Clock, SystemClock
 from .domain import is_allowed_category
 from .errors import ConflictError, NotFoundError, PermissionDenied, ValidationError
+from .exceptions import ExceptionService
 from .models import Actor, DomainRecord, Site, WriteReceipt
 from .storage import Database
 
@@ -25,6 +26,7 @@ class DomainService:
     def __init__(self, database: Database, clock: Clock | None = None) -> None:
         self.database = database
         self.clock = clock or SystemClock()
+        self.exceptions = ExceptionService(self)
 
     def _now(self) -> str:
         return self.clock.now().isoformat().replace("+00:00", "Z")

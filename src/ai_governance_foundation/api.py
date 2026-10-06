@@ -48,6 +48,39 @@ def route(service: DomainService, method: str, path: str, body: dict[str, Any] |
             query = parse_qs(parsed.query)
             after = int(query.get("after_sequence", ["0"])[0])
             return 200, {"items": service.audit_events(after)}
+        if method == "POST" and parsed.path == "/exception-requests":
+            receipt = service.exceptions.submit_exception(actor_id=actor_id, **body)
+            return 200 if receipt.replayed else 201, receipt.__dict__
+        if method == "POST" and parsed.path == "/approver-scopes":
+            receipt = service.exceptions.register_approver_scope(actor_id=actor_id, **body)
+            return 200 if receipt.replayed else 201, receipt.__dict__
+        if method == "POST" and parsed.path == "/exception-decisions":
+            receipt = service.exceptions.decide_exception(actor_id=actor_id, **body)
+            return 200 if receipt.replayed else 201, receipt.__dict__
+        if method == "POST" and parsed.path == "/exception-revocations":
+            receipt = service.exceptions.revoke_exception(actor_id=actor_id, **body)
+            return 200 if receipt.replayed else 201, receipt.__dict__
+        if method == "POST" and parsed.path == "/exception-usages":
+            receipt = service.exceptions.record_exception_usage(actor_id=actor_id, **body)
+            return 200 if receipt.replayed else 201, receipt.__dict__
+        if method == "POST" and parsed.path == "/exception-reviews":
+            receipt = service.exceptions.review_exception(actor_id=actor_id, **body)
+            return 200 if receipt.replayed else 201, receipt.__dict__
+        if method == "GET" and parsed.path == "/exception-requests":
+            query = parse_qs(parsed.query)
+            exception_id = query.get("exception_id", [""])[0]
+            if not exception_id:
+                raise ValidationError("exception_id 不能为空")
+            return 200, service.exceptions.get_exception(actor_id=actor_id, exception_id=exception_id)
+        if method == "GET" and parsed.path == "/exceptions/active":
+            return 200, {"items": service.exceptions.list_active_exceptions(actor_id=actor_id)}
+        if method == "GET" and parsed.path == "/exception-usages":
+            query = parse_qs(parsed.query)
+            exception_id = query.get("exception_id", [""])[0]
+            if not exception_id:
+                raise ValidationError("exception_id 不能为空")
+            return 200, {"items": service.exceptions.list_exception_usages(actor_id=actor_id,
+                                                                           exception_id=exception_id)}
         return 404, {"error": "route_not_found", "message": "接口不存在"}
     except DomainError as exc:
         return exc.status, {"error": exc.code, "message": str(exc)}

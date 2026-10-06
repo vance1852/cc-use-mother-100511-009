@@ -63,6 +63,59 @@ CREATE TABLE IF NOT EXISTS audit_events (
     event_hash TEXT NOT NULL UNIQUE,
     occurred_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS exception_requests (
+    exception_id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL REFERENCES organizations(organization_id),
+    rule_id TEXT NOT NULL,
+    subject_id TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    effect TEXT NOT NULL CHECK(effect IN ('allow', 'deny')),
+    risk_level TEXT NOT NULL CHECK(risk_level IN ('low', 'medium', 'high')),
+    reason TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('pending', 'active', 'rejected', 'cancelled', 'expired', 'revoked', 'closed')),
+    requested_by TEXT NOT NULL REFERENCES actors(actor_id),
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    decided_at TEXT,
+    ended_at TEXT,
+    end_reason TEXT,
+    approval_basis_json TEXT
+);
+CREATE TABLE IF NOT EXISTS exception_approvals (
+    exception_id TEXT NOT NULL REFERENCES exception_requests(exception_id),
+    tier INTEGER NOT NULL CHECK(tier >= 1),
+    approver_id TEXT NOT NULL REFERENCES actors(actor_id),
+    decision TEXT NOT NULL CHECK(decision IN ('approved', 'rejected')),
+    comment TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    PRIMARY KEY (exception_id, tier)
+);
+CREATE TABLE IF NOT EXISTS approver_scopes (
+    scope_id TEXT PRIMARY KEY,
+    actor_id TEXT NOT NULL REFERENCES actors(actor_id),
+    organization_id TEXT NOT NULL REFERENCES organizations(organization_id),
+    rule_id TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    max_risk_level TEXT NOT NULL CHECK(max_risk_level IN ('low', 'medium', 'high')),
+    tier INTEGER NOT NULL CHECK(tier BETWEEN 1 AND 3),
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS exception_usages (
+    usage_id TEXT PRIMARY KEY,
+    exception_id TEXT NOT NULL REFERENCES exception_requests(exception_id),
+    actor_id TEXT NOT NULL REFERENCES actors(actor_id),
+    action TEXT NOT NULL,
+    detail_json TEXT NOT NULL,
+    approval_basis_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS exception_reviews (
+    exception_id TEXT PRIMARY KEY REFERENCES exception_requests(exception_id),
+    outcome TEXT NOT NULL CHECK(outcome IN ('no_issue', 'misuse_found', 'process_gap')),
+    notes TEXT NOT NULL,
+    reviewed_by TEXT NOT NULL REFERENCES actors(actor_id),
+    reviewed_at TEXT NOT NULL
+);
 """
 
 

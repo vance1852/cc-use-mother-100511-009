@@ -11,6 +11,9 @@ class AcceptanceTest(unittest.TestCase):
         self.assertFalse(result["first_replayed"])
         self.assertTrue(result["second_replayed"])
         self.assertEqual(1, result["records"])
+        self.assertEqual("closed", result["exception_status"])
+        self.assertEqual(1, result["exception_usages"])
+        self.assertEqual(0, result["active_exceptions"])
 
 
 if __name__ == "__main__":
